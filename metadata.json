@@ -1,0 +1,5 @@
+{
+  "name": "TradeMind AI",
+  "description": "An advanced AI trading assistant that analyzes charts, balance sheets, and market news to provide buy/sell advice using deep reasoning and real-time search grounding.",
+  "requestFramePermissions": []
+}
