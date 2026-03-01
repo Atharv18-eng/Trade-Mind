@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel, Modality } from "@google/genai";
 import { MarketNewsItem, TradeAnalysis } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -73,11 +73,11 @@ export const analyzeTrade = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 16384 }, 
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }, 
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -126,19 +126,50 @@ export const quickLookup = async (term: string): Promise<string> => {
   return response.text || "Could not define term.";
 };
 
-// 4. Chatbot - Uses gemini-3-pro-preview
+// 4. Chatbot - Uses gemini-3.1-pro-preview with Thinking Mode
 export const sendChatMessage = async (history: {role: string, parts: {text: string}[]}[], newMessage: string) => {
+    let validHistory = [...history];
+    if (validHistory.length > 0 && validHistory[0].role === 'model') {
+        validHistory = validHistory.slice(1);
+    }
+
     const chat = ai.chats.create({
-        model: 'gemini-3-pro-preview',
-        history: history,
+        model: 'gemini-3.1-pro-preview',
+        history: validHistory,
         config: {
-            systemInstruction: "You are a helpful and cautious financial assistant. Do not give binding financial advice, but provide educational analysis.",
+            systemInstruction: "You are a helpful and cautious financial assistant. Do not give binding financial advice, but provide educational analysis. Keep your responses concise for voice interaction.",
+            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
         }
     });
 
     const response = await chat.sendMessage({ message: newMessage });
     return response.text;
 }
+
+// 6. Text-to-Speech - Uses gemini-2.5-flash-preview-tts
+export const generateSpeech = async (text: string): Promise<string | null> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
+          },
+        },
+      },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return base64Audio || null;
+  } catch (error) {
+    console.error("TTS Error:", error);
+    return null;
+  }
+};
+
 
 // 5. Risk Elaboration - Uses gemini-3-flash-preview for speed
 export const explainRiskFactor = async (ticker: string, risk: string): Promise<string> => {

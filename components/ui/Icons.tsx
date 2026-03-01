@@ -18,7 +18,8 @@ import {
   History,
   Trash2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
 
 export const Icons = {
@@ -40,5 +41,6 @@ export const Icons = {
   History,
   Trash2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  X
 };

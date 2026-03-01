@@ -1,9 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { analyzeTrade, explainRiskFactor } from '../services/geminiService';
-import { TradeAnalysis, AnalysisHistoryItem } from '../types';
+import { TradeAnalysis, AnalysisHistoryItem, PriceAlert } from '../types';
 import { Icons } from './ui/Icons';
 import TradingViewWidget from './TradingViewWidget';
 import { TickerNews } from './TickerNews';
+
+// Sub-component for Alert Notification
+const AlertNotification: React.FC<{ alert: PriceAlert; onClose: () => void }> = ({ alert, onClose }) => {
+  return (
+    <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
+      <div className="bg-slate-900 border-2 border-emerald-500 rounded-xl p-4 shadow-2xl flex items-center gap-4 max-w-md">
+        <div className="bg-emerald-500/20 p-3 rounded-full">
+          <Icons.Zap className="text-emerald-400 w-6 h-6" />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-white">Price Alert Triggered!</h4>
+          <p className="text-sm text-slate-300">
+            {alert.ticker} has crossed your {alert.threshold} threshold ({alert.condition}).
+          </p>
+        </div>
+        <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+          <Icons.X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // Sub-component for individual interactive risk items
 const RiskItem: React.FC<{ risk: string; ticker: string }> = ({ risk, ticker }) => {
@@ -78,18 +100,74 @@ export const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TradeAnalysis | null>(null);
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [triggeredAlert, setTriggeredAlert] = useState<PriceAlert | null>(null);
+  const [newAlert, setNewAlert] = useState({ ticker: '', threshold: '', condition: 'above' as 'above' | 'below' });
 
-  // Load history from localStorage on mount
+  // Load history and alerts from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('tradeHistory');
-    if (saved) {
-      try {
-        setHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse history", e);
-      }
+    const savedHistory = localStorage.getItem('tradeHistory');
+    if (savedHistory) {
+      try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
+    }
+    const savedAlerts = localStorage.getItem('priceAlerts');
+    if (savedAlerts) {
+      try { setAlerts(JSON.parse(savedAlerts)); } catch (e) {}
     }
   }, []);
+
+  // Simulated Price Monitor
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (alerts.length === 0) return;
+
+      // Simulate price check for active alerts
+      const updatedAlerts = alerts.map(alert => {
+        if (!alert.isActive) return alert;
+
+        // Mock price logic: random fluctuation around threshold
+        // In a real app, this would fetch from an API
+        const mockPrice = alert.threshold * (0.95 + Math.random() * 0.1);
+        const isTriggered = alert.condition === 'above' 
+          ? mockPrice >= alert.threshold 
+          : mockPrice <= alert.threshold;
+
+        if (isTriggered && !alert.triggeredAt) {
+          setTriggeredAlert(alert);
+          return { ...alert, isActive: false, triggeredAt: Date.now() };
+        }
+        return alert;
+      });
+
+      if (JSON.stringify(updatedAlerts) !== JSON.stringify(alerts)) {
+        setAlerts(updatedAlerts);
+        localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [alerts]);
+
+  const addAlert = () => {
+    if (!newAlert.ticker || !newAlert.threshold) return;
+    const alert: PriceAlert = {
+      id: Date.now().toString(),
+      ticker: newAlert.ticker.toUpperCase(),
+      threshold: parseFloat(newAlert.threshold),
+      condition: newAlert.condition,
+      isActive: true
+    };
+    const updated = [...alerts, alert];
+    setAlerts(updated);
+    localStorage.setItem('priceAlerts', JSON.stringify(updated));
+    setNewAlert({ ticker: '', threshold: '', condition: 'above' });
+  };
+
+  const removeAlert = (id: string) => {
+    const updated = alerts.filter(a => a.id !== id);
+    setAlerts(updated);
+    localStorage.setItem('priceAlerts', JSON.stringify(updated));
+  };
 
   const addToHistory = (analysis: TradeAnalysis, symbol: string) => {
     const newItem: AnalysisHistoryItem = {
@@ -301,8 +379,76 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Sidebar / History Column */}
-      <div className="lg:col-span-1">
-        <div className="sticky top-6 bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden max-h-[calc(100vh-100px)] flex flex-col">
+      <div className="lg:col-span-1 space-y-6">
+        {/* Alerts Section */}
+        <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-slate-700 bg-slate-900/50 flex justify-between items-center">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Icons.Zap className="text-emerald-400 w-4 h-4" />
+              Price Alerts
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="space-y-2">
+              <input 
+                placeholder="Ticker (e.g. BTC)"
+                value={newAlert.ticker}
+                onChange={e => setNewAlert({...newAlert, ticker: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-xs text-white outline-none focus:border-emerald-500"
+              />
+              <div className="flex gap-2">
+                <input 
+                  type="number"
+                  placeholder="Price"
+                  value={newAlert.threshold}
+                  onChange={e => setNewAlert({...newAlert, threshold: e.target.value})}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-md p-2 text-xs text-white outline-none focus:border-emerald-500"
+                />
+                <select 
+                  value={newAlert.condition}
+                  onChange={e => setNewAlert({...newAlert, condition: e.target.value as 'above' | 'below'})}
+                  className="bg-slate-900 border border-slate-700 rounded-md p-2 text-[10px] text-white outline-none"
+                >
+                  <option value="above">Above</option>
+                  <option value="below">Below</option>
+                </select>
+              </div>
+              <button 
+                onClick={addAlert}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 rounded-md transition-colors"
+              >
+                Set Alert
+              </button>
+            </div>
+
+            <div className="pt-4 space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+              {alerts.length === 0 && <p className="text-[10px] text-slate-500 text-center">No active alerts</p>}
+              {alerts.map(alert => (
+                <div key={alert.id} className="bg-slate-900/50 border border-slate-700 p-2 rounded-md flex justify-between items-center group">
+                  <div>
+                    <div className="text-xs font-bold text-white">{alert.ticker}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {alert.condition === 'above' ? '>' : '<'} {alert.threshold}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {alert.triggeredAt ? (
+                      <span className="text-[8px] text-emerald-500 font-bold uppercase">Triggered</span>
+                    ) : (
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    )}
+                    <button onClick={() => removeAlert(alert.id)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                      <Icons.X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* History Section */}
+        <div className="sticky top-6 bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden max-h-[calc(100vh-400px)] flex flex-col">
           <div className="p-4 border-b border-slate-700 bg-slate-900/50 flex justify-between items-center">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <Icons.History className="text-slate-400 w-4 h-4" />
@@ -362,6 +508,12 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {triggeredAlert && (
+        <AlertNotification 
+          alert={triggeredAlert} 
+          onClose={() => setTriggeredAlert(null)} 
+        />
+      )}
     </div>
   );
 };

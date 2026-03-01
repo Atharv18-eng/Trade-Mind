@@ -34,3 +34,12 @@ export enum AppView {
   MARKET_PULSE = 'MARKET_PULSE',
   CHAT = 'CHAT',
 }
+
+export interface PriceAlert {
+  id: string;
+  ticker: string;
+  threshold: number;
+  condition: 'above' | 'below';
+  isActive: boolean;
+  triggeredAt?: number;
+}
