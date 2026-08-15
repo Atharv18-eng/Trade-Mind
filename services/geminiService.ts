@@ -1,7 +1,8 @@
 import { GoogleGenAI, Type, ThinkingLevel, Modality } from "@google/genai";
 import { MarketNewsItem, TradeAnalysis } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || "dummy_key_for_client_initialization";
+const ai = new GoogleGenAI({ apiKey });
 
 // 1. Search Grounding (Market Pulse) - Uses gemini-3-flash-preview
 export const fetchMarketNews = async (ticker: string): Promise<MarketNewsItem[]> => {
