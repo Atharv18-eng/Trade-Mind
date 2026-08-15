@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { MarketPulse } from './components/MarketPulse';
 import { ChatBot } from './components/ChatBot';
+import { NemotronHUD } from './components/NemotronHUD';
 import { QuickLookup } from './components/QuickLookup';
 import { AppView } from './types';
 import { Icons } from './components/ui/Icons';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  const [currentView, setCurrentView] = useState<AppView>(AppView.NEMATRON_HUD);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -57,6 +58,18 @@ const App: React.FC = () => {
             <Icons.MessageSquare className="w-5 h-5" />
             <span>AI Chat</span>
           </button>
+
+          <button
+            onClick={() => setCurrentView(AppView.NEMATRON_HUD)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              currentView === AppView.NEMATRON_HUD
+                ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+            }`}
+          >
+            <Icons.Bot className="w-5 h-5 text-cyan-400" />
+            <span className="font-semibold">Nemotron Agent HUD</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-800">
@@ -70,6 +83,7 @@ const App: React.FC = () => {
           {currentView === AppView.DASHBOARD && <Dashboard />}
           {currentView === AppView.MARKET_PULSE && <MarketPulse />}
           {currentView === AppView.CHAT && <ChatBot />}
+          {currentView === AppView.NEMATRON_HUD && <NemotronHUD />}
         </div>
       </main>
 

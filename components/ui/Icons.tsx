@@ -19,7 +19,25 @@ import {
   Trash2,
   Clock,
   ArrowRight,
-  X
+  X,
+  Cpu,
+  Terminal,
+  Shield,
+  RefreshCw,
+  Sliders,
+  Database,
+  Flame,
+  Bot,
+  Activity,
+  Code,
+  Sparkles,
+  Lock,
+  Unlock,
+  Key,
+  Layers,
+  Settings,
+  SlidersHorizontal,
+  Wand2
 } from 'lucide-react';
 
 export const Icons = {
@@ -42,5 +60,23 @@ export const Icons = {
   Trash2,
   Clock,
   ArrowRight,
-  X
+  X,
+  Cpu,
+  Terminal,
+  Shield,
+  RefreshCw,
+  Sliders,
+  Database,
+  Flame,
+  Bot,
+  Activity,
+  Code,
+  Sparkles,
+  Lock,
+  Unlock,
+  Key,
+  Layers,
+  Settings,
+  SlidersHorizontal,
+  Wand2
 };
